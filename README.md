@@ -1,5 +1,7 @@
 # docker-memoize
 
+[![Build Status](https://travis-ci.org/sh19910711/docker-memoize.svg?branch=master)](https://travis-ci.org/sh19910711/docker-memoize)
+
 ## Sketch of usage
 
 ```shell
