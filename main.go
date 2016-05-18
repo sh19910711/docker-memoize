@@ -1,8 +1,11 @@
 package main
 
 import (
+	"./filesystem"
 	"flag"
 	"fmt"
+	"github.com/golang/glog"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -23,6 +26,7 @@ func main() {
 	child := flag.Bool("child", false, "")
 	mount = flag.String("mount", "", "")
 	flag.Parse()
+	defer glog.Flush()
 
 	if *child {
 		childMain()
@@ -33,8 +37,9 @@ func main() {
 	}
 }
 
-func childCommand(w *os.File) *exec.Cmd {
-	args := []string{"--child"}
+func childCommand(mnt string, w *os.File) *exec.Cmd {
+	args := []string{"--child", "--mount", mnt}
+	args = append(args, os.Args[1:]...)
 	cmd := exec.Command(os.Args[0], args...)
 	cmd.ExtraFiles = []*os.File{w}
 	cmd.Stdout = os.Stdout
@@ -43,6 +48,12 @@ func childCommand(w *os.File) *exec.Cmd {
 }
 
 func parentMain() (err error) {
+	// create tmpdir
+	mnt, err := ioutil.TempDir("", "docker-memoize")
+	if err != nil {
+		return err
+	}
+
 	// create pipe
 	r, w, err := os.Pipe()
 	if err != nil {
@@ -50,7 +61,7 @@ func parentMain() (err error) {
 	}
 
 	// create command
-	cmd := childCommand(w)
+	cmd := childCommand(mnt, w)
 
 	// start command
 	if err := cmd.Start(); err != nil {
@@ -61,6 +72,8 @@ func parentMain() (err error) {
 
 	// return result
 	if status == DAEMON_OK {
+		fmt.Printf("export PATH=%v:$PATH", mnt)
+		fmt.Println()
 		return nil
 	} else {
 		return fmt.Errorf("Failed to start child")
@@ -98,15 +111,33 @@ func childMain() {
 	}
 
 	// new session
-	signal.Ignore(syscall.SIGCHLD)
-	syscall.Close(0)
-	syscall.Close(1)
-	syscall.Close(2)
+	syscall.Close(0) // stdout
+	syscall.Close(1) // stdin
+	syscall.Close(2) // stderr
 	syscall.Setsid()
 	syscall.Umask(022)
 	syscall.Chdir("/")
 
-	for {
-		time.Sleep(1000 * time.Millisecond)
+	// mount fs
+	server, err := filesystem.MountFileSystem(*mount)
+	if err != nil {
+		log.Fatal(err)
 	}
+
+	// unmount filesystem
+	sigchan := make(chan os.Signal, 1)
+	signal.Notify(sigchan, syscall.SIGINT, syscall.SIGKILL, syscall.SIGTERM)
+
+	// async: wait signal
+	go func() {
+		<-sigchan
+		glog.Info("server.Unmount()")
+		server.Unmount()
+	}()
+
+	// terminate
+	glog.Info("server.Serve()")
+	server.Serve()
+	signal.Stop(sigchan)
+	glog.Flush()
 }
