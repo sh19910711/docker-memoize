@@ -1,7 +1,6 @@
 package main
 
 import (
-	"./lib"
 	"flag"
 	"fmt"
 	"github.com/golang/glog"
@@ -123,7 +122,7 @@ func childMain() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	conf := lib.Parse(string(yaml))
+	conf := Parse(string(yaml))
 
 	// new session
 	syscall.Close(0) // stdout
@@ -134,7 +133,7 @@ func childMain() {
 	syscall.Chdir("/")
 
 	// mount fs
-	server, err := lib.MountFileSystem(conf, *mount)
+	server, err := MountFileSystem(conf, *mount)
 	if err != nil {
 		log.Fatal(err)
 	}
