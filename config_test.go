@@ -1,7 +1,6 @@
-package main_test
+package main
 
 import (
-	"."
 	"testing"
 )
 
@@ -15,7 +14,7 @@ npm:
 `
 
 func TestParse(t *testing.T) {
-	conf := main.Parse(EXAMPLE_CONFIG)
+	conf := Parse(EXAMPLE_CONFIG)
 	if len(conf) != 2 {
 		t.Fatalf("size should be 2, but %v", len(conf))
 	}
