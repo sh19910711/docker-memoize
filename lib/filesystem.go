@@ -28,6 +28,7 @@ func (self *FileSystem) GetAttr(name string, context *fuse.Context) (*fuse.Attr,
 }
 
 func (self *FileSystem) OpenDir(name string, context *fuse.Context) (c []fuse.DirEntry, code fuse.Status) {
+	glog.Info("FileSystem#OpenDir()")
 	if name == "" {
 		c = []fuse.DirEntry{}
 		for k := range self.Config {
@@ -51,7 +52,6 @@ func (self *FileSystem) Open(name string, flags uint32, context *fuse.Context) (
 }
 
 func MountFileSystem(conf Config, mnt string) (*fuse.Server, error) {
-	glog.Info("FileSystem#OpenDir()")
 	nfs := pathfs.NewPathNodeFs(&FileSystem{Config: conf, FileSystem: pathfs.NewDefaultFileSystem()}, nil)
 	server, _, err := nodefs.MountRoot(mnt, nfs.Root(), nil)
 	return server, err
