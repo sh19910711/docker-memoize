@@ -41,9 +41,16 @@ command() {
     : nothing to do
   else
     msg create $name
-    docker run -d --name $name '{{.Image}}' /bin/sh -c 'while true; do echo hello; sleep 1000; done'
+    docker run -d \
+      -u "$UID:$GROUPS" \
+      -e "HOME=/home/user" \
+      -v "$HOME:/home/user" \
+      -w "/wrk" \
+      -v "$PWD:/wrk" \
+      --name $name \
+      '{{.Image}}' /bin/sh -c 'while true; do echo hello; sleep 1000; done'
   fi
-  docker exec -i $name '{{.Command}}'
+  docker exec -i $name '{{.Command}}' "$@"
 }
 
 command $@
