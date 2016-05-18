@@ -1,7 +1,7 @@
 package main
 
 import (
-	"./filesystem"
+	"./lib"
 	"flag"
 	"fmt"
 	"github.com/golang/glog"
@@ -28,9 +28,15 @@ func main() {
 	flag.Parse()
 	defer glog.Flush()
 
+	if len(flag.Args()) != 1 {
+		log.Fatalf("%v [opts...] <path/to/config.yml>", os.Args[0])
+	}
+
 	if *child {
+		glog.Info("childMain()")
 		childMain()
 	} else {
+		glog.Info("parentMain()")
 		if err := parentMain(); err != nil {
 			log.Fatal(err)
 		}
@@ -74,6 +80,8 @@ func parentMain() (err error) {
 	if status == DAEMON_OK {
 		fmt.Printf("export PATH=%v:$PATH", mnt)
 		fmt.Println()
+		fmt.Printf("export DOCKER_MEMOIZE_MNT=%v", mnt)
+		fmt.Println()
 		return nil
 	} else {
 		return fmt.Errorf("Failed to start child")
@@ -110,16 +118,23 @@ func childMain() {
 		pipe.Write([]byte{DAEMON_OK})
 	}
 
+	// read config
+	yaml, err := ioutil.ReadFile(flag.Args()[0])
+	if err != nil {
+		log.Fatal(err)
+	}
+	conf := lib.Parse(string(yaml))
+
 	// new session
 	syscall.Close(0) // stdout
 	syscall.Close(1) // stdin
-	syscall.Close(2) // stderr
+	// syscall.Close(2) // stderr
 	syscall.Setsid()
 	syscall.Umask(022)
 	syscall.Chdir("/")
 
 	// mount fs
-	server, err := filesystem.MountFileSystem(*mount)
+	server, err := lib.MountFileSystem(conf, *mount)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -137,7 +152,9 @@ func childMain() {
 
 	// terminate
 	glog.Info("server.Serve()")
+	glog.Flush()
 	server.Serve()
+
 	signal.Stop(sigchan)
 	glog.Flush()
 }

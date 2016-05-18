@@ -1,9 +1,8 @@
-package main
+package lib
 
 import (
-	"log"
-
 	"gopkg.in/yaml.v2"
+	"log"
 )
 
 type Command struct {
@@ -11,9 +10,11 @@ type Command struct {
 	Command string `command`
 }
 
-func Parse(text string) map[string]Command {
+type Config map[string]Command
+
+func Parse(text string) Config {
 	bytes := []byte(text)
-	config := make(map[string]Command)
+	config := make(Config)
 
 	err := yaml.Unmarshal(bytes, &config)
 	if err != nil {
