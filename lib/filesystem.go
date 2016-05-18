@@ -21,7 +21,7 @@ func (self *FileSystem) GetAttr(name string, context *fuse.Context) (*fuse.Attr,
 	} else if _, ok := self.Config[name]; ok {
 		return &fuse.Attr{
 			Mode: fuse.S_IFREG | 0755,
-			Size: uint64(len(name)),
+			Size: uint64(123),
 		}, fuse.OK
 	}
 	return nil, fuse.ENOENT
@@ -40,13 +40,14 @@ func (self *FileSystem) OpenDir(name string, context *fuse.Context) (c []fuse.Di
 
 func (self *FileSystem) Open(name string, flags uint32, context *fuse.Context) (file nodefs.File, code fuse.Status) {
 	glog.Info("FileSystem#Open()")
-	if name != "file.sh" {
-		return nil, fuse.ENOENT
+	if v, ok := self.Config[name]; ok {
+		locals := Locals{Image: v.Image}
+		return nodefs.NewDataFile([]byte(Render(&locals))), fuse.OK
 	}
 	if flags&fuse.O_ANYWRITE != 0 {
 		return nil, fuse.EPERM
 	}
-	return nodefs.NewDataFile([]byte("hello")), fuse.OK
+	return nil, fuse.ENOENT
 }
 
 func MountFileSystem(conf Config, mnt string) (*fuse.Server, error) {

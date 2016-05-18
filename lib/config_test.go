@@ -15,7 +15,7 @@ npm:
 `
 
 func TestParse(t *testing.T) {
-	conf := main.Parse(EXAMPLE_CONFIG)
+	conf := lib.Parse(EXAMPLE_CONFIG)
 	if len(conf) != 2 {
 		t.Fatalf("size should be 2, but %v", len(conf))
 	}
