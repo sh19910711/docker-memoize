@@ -41,9 +41,8 @@ func (self *FileSystem) OpenDir(name string, context *fuse.Context) (c []fuse.Di
 
 func (self *FileSystem) Open(name string, flags uint32, context *fuse.Context) (file nodefs.File, code fuse.Status) {
 	glog.Info("FileSystem#Open()")
-	if v, ok := self.Config[name]; ok {
-		locals := Locals{Image: v.Image}
-		return nodefs.NewDataFile([]byte(Render(&locals))), fuse.OK
+	if cmdConfig, ok := self.Config[name]; ok {
+		return nodefs.NewDataFile([]byte(Render(&cmdConfig))), fuse.OK
 	}
 	if flags&fuse.O_ANYWRITE != 0 {
 		return nil, fuse.EPERM
