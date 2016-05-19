@@ -16,7 +16,7 @@ import (
 const (
 	DAEMON_STARTED = iota
 	DAEMON_OK
-	DAEMON_NG
+	DAEMON_BAD
 )
 
 var mount *string
@@ -33,7 +33,9 @@ func main() {
 
 	if *child {
 		glog.Info("childMain()")
-		childMain()
+		if err := childMain(); err != nil {
+			log.Fatal(err)
+		}
 	} else {
 		glog.Info("parentMain()")
 		if err := parentMain(); err != nil {
@@ -52,7 +54,7 @@ func childCommand(mnt string, w *os.File) *exec.Cmd {
 	return cmd
 }
 
-func parentMain() (err error) {
+func parentMain() error {
 	// create tmpdir
 	mnt, err := ioutil.TempDir("", "docker-memoize")
 	if err != nil {
@@ -77,10 +79,7 @@ func parentMain() (err error) {
 
 	// return result
 	if status == DAEMON_OK {
-		fmt.Printf("export PATH=%v:$PATH", mnt)
-		fmt.Println()
-		fmt.Printf("export DOCKER_MEMOIZE_MNT=%v", mnt)
-		fmt.Println()
+		fmt.Println(mnt)
 		return nil
 	} else {
 		return fmt.Errorf("Failed to start child")
@@ -109,18 +108,19 @@ func waitChild(r *os.File) int {
 	return status
 }
 
-func childMain() {
+func childMain() error {
 	// notify its status
 	pipe := os.NewFile(uintptr(3), "pipe")
-	if pipe != nil {
-		defer pipe.Close()
-		pipe.Write([]byte{DAEMON_OK})
-	}
 
 	// read config
 	yaml, err := ioutil.ReadFile(flag.Args()[0])
 	if err != nil {
-		log.Fatal(err)
+		// notify BAD
+		if pipe != nil {
+			defer pipe.Close()
+			pipe.Write([]byte{DAEMON_BAD})
+		}
+		return err
 	}
 	conf := Parse(string(yaml))
 
@@ -135,7 +135,7 @@ func childMain() {
 	// mount fs
 	server, err := MountFileSystem(conf, *mount)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// unmount filesystem
@@ -149,11 +149,16 @@ func childMain() {
 		server.Unmount()
 	}()
 
-	// terminate
-	glog.Info("server.Serve()")
-	glog.Flush()
+	// notify OK
+	if pipe != nil {
+		defer pipe.Close()
+		pipe.Write([]byte{DAEMON_OK})
+	}
 	server.Serve()
 
+	// terminate
 	signal.Stop(sigchan)
 	glog.Flush()
+
+	return nil
 }
