@@ -8,6 +8,7 @@ import (
 type Command struct {
 	Image   string `image`
 	Command string `command`
+	Git     bool   `git`
 }
 
 type Config map[string]Command
