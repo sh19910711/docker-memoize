@@ -1,6 +1,6 @@
 # docker-path
 
-[![Build Status](https://travis-ci.org/sh19910711/docker-memoize.svg?branch=master)](https://travis-ci.org/sh19910711/docker-memoize)
+[![Build Status](https://travis-ci.org/sh19910711/docker-path.svg?branch=master)](https://travis-ci.org/sh19910711/docker-path)
 
 ## Sketch of usage
 
