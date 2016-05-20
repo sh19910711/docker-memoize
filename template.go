@@ -84,7 +84,14 @@ command() {
       "$image" \
       /bin/sh -c 'while true; do sleep 1000000; done'
   fi
-  docker exec -ti $name "$command" "$@"
+
+  if test -t 0; then
+    # tty
+    docker exec -ti $name "$command" "$@"
+  else
+    # input
+    docker exec -i $name "$command" "$@"
+  fi
 }
 
 command $@
