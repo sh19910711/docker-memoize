@@ -1,22 +1,22 @@
-# docker-memoize
+# docker-path
 
 [![Build Status](https://travis-ci.org/sh19910711/docker-memoize.svg?branch=master)](https://travis-ci.org/sh19910711/docker-memoize)
 
 ## Sketch of usage
 
 ```shell
-$ cat docker-memoize.yml
+$ cat example.yml
 bundle:
-  image: ruby-bundler
+  image: ruby:2.3.1
   command: bundle
 npm:
   image: nodejs
   command: npm
-
-$ docker-memoize config.yml
-export PATH=$PATH:/tmp/path/to/mnt
-
-$ eval $(docker-memoize config.yml)
+$ docker-path example.yml
+/tmp/path/to/mnt
+$ ls /tmp/path/to/mnt
+bundle npm
+$ export PATH=$(docker-path example.yml):$PATH
 $ bundle --version
 Bundler version *.*.*
 $ npm --version

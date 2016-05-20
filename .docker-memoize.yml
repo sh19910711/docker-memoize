@@ -1,4 +1,0 @@
-# example of configuration
-bundle:
-  image: ruby-bundler
-  command: bundle
