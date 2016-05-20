@@ -11,6 +11,10 @@ const TEMPLATE_SCRIPT string = `
 
 DOCKER_BIN=$(which docker)
 
+enable_git() {
+  test '{{.Git}}' == 'true'
+}
+
 msg() {
   echo $@ >&2
 }
@@ -35,22 +39,52 @@ container_exist() {
   container_names | grep $1 >/dev/null 2>&1
 }
 
+is_git_repo() {
+  git rev-parse --git-dir >/dev/null 2>&1
+}
+
+workroot() {
+  if enable_git && is_git_repo; then
+    git rev-parse --show-toplevel
+  else
+    echo $PWD
+  fi
+}
+
+workspace() {
+  if enable_git; then
+    local root=$(git rev-parse --show-toplevel)
+    local rel=$(realpath --relative-base "${root}" "$PWD")
+    echo "/workspace/$rel"
+  else
+    echo "/workspace"
+  fi
+}
+
+container_id() {
+  env | sha1sum | awk '{print $1}'
+}
+
 command() {
-  local name=docker_memoize_$(echo $PWD | sed -e 's;[^a-zA-Z0-9_.-];_;g' | cut -c 2-)
+  local image='{{.Image}}'
+  local command='{{.Command}}'
+  local name=docker_path_${command}_$(container_id)
   if container_exist $name; then
     : nothing to do
   else
     msg create $name
     docker run -d \
       -u "$UID:$GROUPS" \
+      -e "TERM=${TERM:-xterm}" \
       -e "HOME=/home/user" \
       -v "$HOME:/home/user" \
-      -w "/wrk" \
-      -v "$PWD:/wrk" \
+      -w "$(workspace)" \
+      -v "$(workroot):/workspace" \
       --name $name \
-      '{{.Image}}' /bin/sh -c 'while true; do echo hello; sleep 1000; done'
+      "$image" \
+      /bin/sh -c 'while true; do sleep 1000000; done'
   fi
-  docker exec -i $name '{{.Command}}' "$@"
+  docker exec -ti $name "$command" "$@"
 }
 
 command $@
