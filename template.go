@@ -76,8 +76,8 @@ command() {
     docker run -d \
       -u "$UID:$GROUPS" \
       -e "TERM=${TERM:-xterm}" \
-      -e "HOME=/home/user" \
-      -v "$HOME:/home/user" \
+      -e "HOME=/opt/user" \
+      -v "$HOME:/opt/user" \
       -w "$(workspace)" \
       -v "$(workroot):/workspace" \
       --name $name \
