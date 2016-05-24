@@ -6,9 +6,11 @@ import (
 )
 
 type Command struct {
-	Image   string `image`
-	Command string `command`
-	Git     bool   `git`
+	Image   string   `image`
+	Command string   `command`
+	Git     bool     `git`
+	Env     []string `env`
+	ExecEnv []string `exec_env`
 }
 
 type Config map[string]Command
