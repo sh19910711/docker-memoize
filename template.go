@@ -87,6 +87,7 @@ docker_run() {
   local cmd=()
 
   cmd+=(docker run -d)
+  cmd+=($DOCKER_OPTS)
   cmd+=($(config_env))
   cmd+=(-u "$UID:$GROUPS")
   cmd+=(-e "TERM=${TERM:-xterm}")
