@@ -15,6 +15,22 @@ enable_git() {
   test '{{.Git}}' == 'true'
 }
 
+config_env() {
+{{ range $env := .Env }}
+  if [[ "${{$env}}" =~ "=" ]]; then
+    echo "-e {{$env}}"
+  else
+    echo "-e {{$env}}=\"${{$env}}\""
+  fi
+{{ end }}
+}
+
+config_exec_env() {
+{{ range $env := .ExecEnv }}
+  echo '{{$env}}'
+{{ end }}
+}
+
 msg() {
   echo $@ >&2
 }
@@ -65,6 +81,26 @@ container_id() {
   env | sha1sum | awk '{print $1}'
 }
 
+docker_run() {
+  local name=$1
+  local image=$2
+  local cmd=()
+
+  cmd+=(docker run -d)
+  cmd+=($(config_env))
+  cmd+=(-u "$UID:$GROUPS")
+  cmd+=(-e "TERM=${TERM:-xterm}")
+  cmd+=(-e "HOME=$HOME")
+  cmd+=(-v "$HOME:$HOME")
+  cmd+=(-w "$(workspace)")
+  cmd+=(-v "$(workroot):/workspace")
+  cmd+=(--name "$name")
+  cmd+=("$image")
+
+  echo ${cmd[@]} /bin/sh -c 'while true; do sleep 1000000; done'
+  ${cmd[@]} /bin/sh -c 'while true; do sleep 1000000; done'
+}
+
 command() {
   local image='{{.Image}}'
   local command='{{.Command}}'
@@ -73,24 +109,17 @@ command() {
     : nothing to do
   else
     msg create $name
-    docker run -d \
-      -u "$UID:$GROUPS" \
-      -e "TERM=${TERM:-xterm}" \
-      -e "HOME=/opt/user" \
-      -v "$HOME:/opt/user" \
-      -w "$(workspace)" \
-      -v "$(workroot):/workspace" \
-      --name $name \
-      "$image" \
-      /bin/sh -c 'while true; do sleep 1000000; done'
+    docker_run $name $image
   fi
 
   if test -t 0; then
     # tty
-    docker exec -ti $name "$command" "$@"
+    local args=$@
+    docker exec -ti $name bash -c "$(config_exec_env) $command $args"
   else
     # input
-    docker exec -i $name "$command" "$@"
+    local args=$@
+    docker exec -i $name bash -c "$(config_exec_env) $command $args"
   fi
 }
 
